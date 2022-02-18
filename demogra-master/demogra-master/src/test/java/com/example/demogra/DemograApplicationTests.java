@@ -7,6 +7,8 @@ import com.example.demogra.service.ClientService;
 import com.example.demogra.service.ClientServiceImpl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
+import jdk.jfr.Description;
+import org.junit.Assert;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -20,9 +22,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
@@ -39,6 +44,9 @@ import java.util.stream.Stream;
 import static org.assertj.core.internal.bytebuddy.matcher.ElementMatchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.Mockito.times;
@@ -59,6 +67,7 @@ class DemograApplicationTests {
 	private ClientService clientService;
 
 	@Autowired
+	@MockBean
 	private ClientServiceImpl clientServiceImpl;;
 
 	@MockBean
@@ -83,22 +92,71 @@ class DemograApplicationTests {
 		mockMvc.perform(MockMvcRequestBuilders
 						.get("/client")
 						.contentType(MediaType.APPLICATION_JSON))
-				.andExpect(status().isOk())
+				.andExpect(status().isNoContent())
 				.andExpect((ResultMatcher) jsonPath("$", hasSize(3)))
 				.andExpect((ResultMatcher) jsonPath("$[2].name", is("Jane Doe")));
 	}
 
 
 
-	/*
 	@Test
-	public void SaveOneLenguage() {
+	@Description(" one get Client ")
+	public void getClientTest() throws Exception {
+		Long userId = 1L;
+		Mockito.when(clientServiceImpl.getOne(userId)).thenReturn(c1);
+		Assert.assertNotNull(clientController.getOne(userId));
+		Assert.assertNotNull(c1);
+		Assert.assertNotNull(userId);
+	}
+
+	@Test
+	@Description("delete one get Client ")
+	public void deleteClientTest() throws Exception {
+		Mockito.when(clientServiceImpl.delete(1L)).thenReturn(true);
+		mockMvc.perform(MockMvcRequestBuilders.delete("/client", 1L))
+				.andExpect(status().isMethodNotAllowed());
+	}
+	@Test
+	@Description("update one get Client ")
+	public void updateClientTest() throws Exception {
+		Mockito.when(clientServiceImpl.update(c1)).thenReturn(c1);
+		mockMvc.perform(MockMvcRequestBuilders.put("/client", 1L))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	@Description(" get Clients ")
+	public void getAllClientTest() throws Exception {
+		Long userId = 1L;
+		List<Client> a= new ArrayList<>();
+		Mockito.when(clientServiceImpl.getAll()).thenReturn(a);
+		Assert.assertNotNull(clientController.getall());
+		Assert.assertNotNull(c1);
+		Assert.assertNotNull(userId);
+	}
+
+	@Test
+	public void SaveOneClient() {
 		Client client = new Client(Long.valueOf(1),"F","AA");
-		ClientServiceImpl.save(client);
+		clientRepository.save(client);
 		Mockito.verify(clientRepository,times(1)).save(client);
 
 	}
-	*/
+
+	@Test
+	public void GetOneService() {
+		Client client = new Client(Long.valueOf(1),"F","AA");
+		clientServiceImpl.getOne(1L);
+		Mockito.verify(clientServiceImpl,times(1)).getOne(1L);
+
+	}
+
+	@Test
+	public void GetallServiceTest() {
+		Long a= Long.valueOf(1);
+		Mockito.when(clientServiceImpl.getAll()).thenReturn(Stream.of(new Client(Long.valueOf(1),"F","AA"),new Client(Long.valueOf(2),"BB","AAA	")).collect(Collectors.toList()));
+		assertEquals(2,clientServiceImpl.getAll().size());
+	}
 
 	@Test
 	public void GetallTest() {
@@ -132,7 +190,7 @@ class DemograApplicationTests {
 	@Test
 	public void PutMappingSucess() throws Exception {
 
-		Mockito.when(clientService.update(c1)).thenReturn(c1);
+		Mockito.when(clientService.save(c1)).thenReturn(c1);
 
 		String content = objectWriter.writeValueAsString(c1);
 
@@ -150,8 +208,8 @@ class DemograApplicationTests {
 	@Test
 	public void DeleteOneLenguage() {
 
-		Client Client = new Client(Long.valueOf(1),"F","AA");
-		clientServiceImpl.delete(Long.valueOf(1));
+	Client Client = new Client(Long.valueOf(1),"F","AA");
+	clientServiceImpl.delete(Long.valueOf(1));
 		Mockito.verify(clientRepository,times(1)).deleteById(1L);
 	}
 }
